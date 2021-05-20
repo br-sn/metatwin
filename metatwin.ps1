@@ -91,7 +91,7 @@ Function Invoke-TimeStomp ($source, $dest) {
 }
 
 # Binaries
-$resourceHackerBin = ".\src\resource_hacker\ResourceHacker.exe"
+$resourceHackerBin = ".\ResourceHacker.exe"
 $resourceHacker_base_script = ".\src\rh_base_script.txt"
 $sigthiefBin       = ".\src\SigThief-master\dist\sigthief.exe"
 
@@ -109,17 +109,18 @@ If ((Test-Path $sigthiefBin) -ne $True)
         Write-Output "[!] Ensure you're running MetaTwin from its local directory. Exiting."
         break
     }
-
+$path = Get-Location
+$currentdir = $path.tostring()
 $timestamp = Get-Date -f yyyyMMdd_HHmmss
-$log_file_base = (".\" + $timestamp + "\" + $timestamp)
+$log_file_base = ($currentdir + "\" + $timestamp + "\" + $timestamp)
 $source_binary_filename = Split-Path $Source -Leaf -Resolve
 $source_binary_filepath = $Source
 $target_binary_filename = Split-Path $Target -Leaf -Resolve
 $target_binary_filepath = $Target
-$source_resource = (".\" + $timestamp + "\" + $timestamp + "_" + $source_binary_filename + ".res")
-$target_saveas = (".\" + $timestamp + "\" + $timestamp + "_" + $target_binary_filename)
-$target_saveas_signed = (".\" + $timestamp + "\" + $timestamp + "_signed_" + $target_binary_filename)
-$resourcehacker_script = (".\" + $timestamp + "\" + $timestamp + "_rh_script.txt")
+$source_resource = ($currentdir + "\" + $timestamp + "\" + $timestamp + "_" + $source_binary_filename + ".res")
+$target_saveas = ($currentdir + "\" + $timestamp + "\" + $timestamp + "_" + $target_binary_filename)
+$target_saveas_signed = ($currentdir + "\" + $timestamp + "\" + $timestamp + "_signed_" + $target_binary_filename)
+$resourcehacker_script = ($currentdir + "\" + $timestamp + "\" + $timestamp + "_rh_script.txt")
 
 New-Item ".\$timestamp" -type directory | out-null
 Write-Output $logo
@@ -139,6 +140,7 @@ Stop-Process -Name ResourceHacker -ea "SilentlyContinue"
 $log_file = ($log_file_base + "_extract.log")
 
 $arg = "-open $source_binary_filepath -action extract -mask ,,, -save $source_resource -log $log_file"
+
 start-process -FilePath $resourceHackerBin -ArgumentList $arg -NoNewWindow -Wait
 
 # Check if extract was successful
@@ -157,8 +159,10 @@ $log_file = ($log_file_base + "_add.log")
 
 # Copy resources using Resource Hacker
 "[*] Copying resources from $source_binary_filename to $target_saveas"
-
-$arg = "-script $resourcehacker_script"
+# Dirty fix to fix some absolute path issues with recent versions of PH. This can be done in a better way.
+$rh_script = ($currentdir + "\" + $timestamp + "_rh_script.txt")
+Copy-Item ($currentdir + "\" + $timestamp + "\" + $timestamp + "_rh_script.txt") -Destination ($currentdir + "\" + $timestamp + "_rh_script.txt")
+$arg = "-script $rh_script"
 start-process -FilePath $resourceHackerBin -ArgumentList $arg -NoNewWindow -Wait
 
 # Add Digital Signature using SigThief
